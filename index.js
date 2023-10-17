@@ -103,8 +103,6 @@ function addRole() {
             if (err) {
                 console.error(err);
             }
-            // const deps = rows.map(({id, name}) => ({id: id, name: name}));
-            // console.log(deps);
             inquirer.prompt([
                 {
                     name: 'showDeps',
@@ -159,41 +157,133 @@ function addEmployee() {
                 }
             ])
             .then((choice) => {
-                const sql = `SELECT CONCAT(managers.first_name, ' ', managers.last_name) AS manager FROM employees 
-                            LEFT JOIN employees AS managers 
-                            ON employees.manager_id = managers.id;`;
+                const sql = `SELECT id, CONCAT(first_name, ' ', last_name) AS name FROM employees;`;
                 db.query(sql, (err, rows) => {
-                    const manage = [];
-                    rows.forEach(manager => {
-                        if (manage.includes(manager)) {
-                            manage.push(manager.manager);
-                        } 
-
-
-// dioshnfjshcuisdjkcxskz
-
-
-
-
-
-
-
-
-                    });
+                    if (err) {
+                        console.error(err);
+                    }
                     console.log(rows);
-                    console.log(manage);
                     inquirer.prompt([
                         {
                             name: 'manager',
                             type: 'list',
                             message: 'Select the manager for this employee',
-                            choices: manage
+                            choices: rows
                         }
                     ])
+                    .then((data) => {
+                        const sql = `INSERT INTO employees (first_name, last_name, role_id, manager_id)
+                        VALUES (?, ?, (SELECT id FROM roles WHERE roles.title = ?), (SELECT id FROM employees AS managers WHERE CONCAT(managers.first_name, ' ', managers.last_name) = ?));`;
+                        db.query(sql, [input.first, input.last, choice.role, data.manager], (err, rows) => {
+                            if (err) {
+                                console.error(err);
+                            }
+                            console.log('Employee added');
+                            init();
+                        });
+                    });
+
+                });
+                   
+            });
+                   
+        });
+    });
+}
+
+function updateEmployeeRole() {
+    const sql = `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employees;`;
+    db.query(sql, (err, rows) => {
+        if (err) {
+            console.error(err);
+        }
+        inquirer.prompt([
+            {
+                name: 'employee',
+                type: 'list',
+                message: 'Which employee would you like to update?',
+                choices: rows
+            }
+        ])
+        .then(data => {
+            console.log(data);
+            const sql = `SELECT title AS name FROM roles;`;
+            db.query(sql, (err, rows) => {
+                if (err) {
+                    console.log(err);
+                }
+                console.log(rows);
+                inquirer.prompt([
+                    {
+                        name: 'role',
+                        type: 'list',
+                        message: 'Select a new role for this employee',
+                        choices: rows
+                    }
+                ])
+                .then(choice => {
+                    const sql = `UPDATE employees SET role_id = (SELECT id FROM roles WHERE roles.title = ?) WHERE CONCAT(employees.first_name, ' ', employees.last_name) = ?;`;
+                    db.query(sql, [choice.role, data.employee], (err, rows) => {
+                        if (err) {
+                            console.error(err);
+                        }
+                        console.log('Employee role updated');
+                        init();
+                    });
+                });
+            });
+        });
+    });
+}
+
+function updateManager() {
+    const sql = `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employees;`
+    db.query(sql, (err, rows) => {
+        if (err) {
+            console.error(err);
+        }
+        inquirer.prompt([
+            {
+                name: 'selectEmp',
+                type: 'list',
+                message: 'Which employee would you like to update the manager for?',
+                choices: rows
+            }
+        ])
+        .then(input => {
+            const sql = `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employees;`;
+            db.query(sql, (err, rows) => {
+                if (err) {
+                    console.error(err);
+                }
+                inquirer.prompt([
+                    {
+                        name: 'newManager',
+                        type: 'list',
+                        message:'Select the new manager for this employee',
+                        choices: rows
+                    }
+                ])
+                .then(choice => {
+                    const sql = `UPDATE employees SET manager_id = (SELECT id FROM employees AS managers WHERE CONCAT(managers.first_name, ' ', managers.last_name) = ?) WHERE CONCAT(first_name, ' ',last_name) = ?;`;
+                    db.query(sql, [choice.newManager, input.selectEmp], (err,rows) => {
+                        if (err) {
+                            console.error(err);
+                        }
+                        console.log('Employee manager updated');
+                    });
                 })
-            })
-        })
-    })
+            });
+        });
+    });
+}
+
+function viewEmpByDepartment() {
+
+}
+
+function depBudget() {
+
 }
 
 function init() { 
@@ -204,71 +294,8 @@ function init() {
         type: 'list',
         message: 'What would you like to do?',
         choices: ['View Departments', 'View Roles', 'View Employees', 'Add Department',
-                    'Add Role', 'Add Employee', 'Update Employee Role']
+                    'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager']
         }
-//         // {
-//         //     when: (input) => input.mainSelection === 'Add Role',
-//         //     name: 'addRole',
-//         //     type: 'input',
-//         //     message: 'Enter name of role',
-//         //     validate: (text) => text.length !== 0 || 'Enter a roll'
-//         // },
-//         // {
-//         //     when: (input) => input.addRole,
-//         //     name: 'addSalary',
-//         //     type: 'input',
-//         //     message: 'Add the salary for this role',
-//         //     validate: (pay) => pay.length !== 0 || 'Enter salary'
-//         // },
-//         // {
-//         //     when: (input) => input.addSalary,
-//         //     name: 'roleDep'  ,
-//         //     type: 'list',
-//         //     message: 'Select the department for this role',
-//         //     choices: showDepartments()
-//         // },
-//         // {
-//         //     when: (input) => input.mainSelection === 'Add Employee',
-//         //     name: 'firstName',
-//         //     type: 'input',
-//         //     message: 'Enter their first name',
-//         //     validate: (text) => text.length === 0 || 'Enter first name'
-//         // },
-//         // {
-//         //     when: (input) => input.firstName,
-//         //     name: 'lastName',
-//         //     type: 'input',
-//         //     message: 'Enter their last name',
-//         //     validate: (text) => text.length === 0 || 'Enter last name'
-//         // },
-//         // {
-//         //     when: (input) => input.lastName,
-//         //     name: 'empRole',
-//         //     type: 'list',
-//         //     message: 'Enter employee role',
-//         //     choices: ['role column from sql database table']
-//         // }, 
-//         // {
-//         //     when: (input) => input.empRole,
-//         //     name: 'empManager',
-//         //     type: 'list',
-//         //     message: 'Select manager for this employee',
-//         //     choices: ['managers column from sql database table']
-//         // },
-//         // {
-//         //     when: (input) => input.mainSelection === 'Update Employee Role',
-//         //     name: 'selectEmp',
-//         //     type: 'list',
-//         //     message: 'Select employee to update',
-//         //     choices: ['employee column from sql database table']
-//         // },
-//         // {
-//         //     when: (input) => input.selectEmp,
-//         //     name: 'selectRole',
-//         //     type: 'list',
-//         //     message: 'Select new role for employee',
-//         //     choices: ['role column from sql database table']
-//         // }
     ])
     .then((input) => {
         const selection = input.mainSelection;
@@ -293,6 +320,10 @@ function init() {
                 addEmployee();
                 break;
             case 'Update Employee Role':
+                updateEmployeeRole();
+                break;
+            case 'Update Employee Manager':
+                updateManager();
                 break;
          }
     })
@@ -303,3 +334,15 @@ init();
 // showDepartments();
 
 // db.end((err) =>  !err || console.error(err));
+
+
+
+
+
+
+// add option for no manager when adding employee
+// add some of the bonus features
+// add env file to protect password
+// modularize,
+// add comments
+// make video

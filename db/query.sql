@@ -42,3 +42,30 @@ VALUES ('Hi', 30, (SELECT id FROM departments WHERE departments.name = 'General'
 SELECT CONCAT(managers.first_name, ' ', managers.last_name) AS manager FROM employees 
 LEFT JOIN employees AS managers 
 ON employees.manager_id = managers.id;
+
+INSERT INTO employees (first_name, last_name, role_id, manager_id)
+VALUES (?, ?, (SELECT id FROM roles WHERE roles.title = ?), (SELECT id FROM employees AS managers WHERE CONCAT(managers.first_name, ' ', managers.last_name) = ?));
+
+
+UPDATE [role_id] employees SET (SELECT id FROM roles WHERE roles.title = ?);
+UPDATE employees SET manager_id = (SELECT id FROM employees AS managers WHERE CONCAT(managers.first_name, ' ', managers.last_name) = 'Cheryl Tunt') 
+WHERE SELECT CONCAT(managers.first_name, ' ', managers.last_name) FROM employees AS managers = 'Cyril Figgis';
+
+
+UPDATE employees SET manager_id = (SELECT id FROM employees AS managers WHERE CONCAT(managers.first_name, ' ', managers.last_name) = 'Sterling Archer') 
+WHERE CONCAT(employees.first_name, ' ', employees.last_name) = 'Cyril Figgis';
+
+UPDATE employees AS employee
+SET
+    manager_id = (SELECT
+                id 
+                FROM
+                employees
+                AS
+                managers
+                WHERE 
+                CONCAT(managers.first_name, ' ', managers.last_name) = 'Lana Kane'
+                )
+WHERE 
+    CONCAT(employee.first_name, ' ', employee.last_name) = 'Sterling Archer';
+            
