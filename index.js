@@ -7,9 +7,9 @@ require('dotenv').config();
 const db = mysql.createConnection(
     {
         host: '127.0.0.1',
-        user: 'root',
-        password: '3510',
-        database: 'workforce_db'
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME
     },
     console.log('connected to database')
 
@@ -169,7 +169,7 @@ function addEmployee() {
                             name: 'manager',
                             type: 'list',
                             message: 'Select the manager for this employee',
-                            choices: rows
+                            choices: rows.concat([{name: 'None'}])
                         }
                     ])
                     .then((data) => {
@@ -262,25 +262,35 @@ function updateManager() {
                         name: 'newManager',
                         type: 'list',
                         message:'Select the new manager for this employee',
-                        choices: rows
+                        choices: rows.concat([{name: 'None'}])
                     }
                 ])
                 .then(choice => {
                     console.log(choice.newManager);
                     const managerId = `SELECT id from employees WHERE CONCAT(first_name, ' ', last_name) = ?;`;
                     const sql = `UPDATE employees SET manager_id = ? WHERE CONCAT(first_name, ' ',last_name) = ?;`;
-                    db.query(managerId, choice.newManager, (err, manager) => {
-                        if (err) {
-                            console.error(err);
-                        }
-                        db.query(sql, [manager[0].id, input.selectEmp], (err,rows) => {
+                    if (choice.newManager === 'None') {
+                        const sqlNull = `UPDATE employees SET manager_id = null WHERE CONCAT(first_name, ' ',last_name) = ?;`;
+                        db.query(sqlNull, input.selectEmp, (err, rows) => {
+                            console.log('Manager updated');
+                            init();
+                        })
+                        
+                    }
+                    else {
+                        db.query(managerId, choice.newManager, (err, manager) => {
                             if (err) {
                                 console.error(err);
                             }
-                            console.log('Employee manager updated');
-                            init();
+                            db.query(sql, [manager[0].id, input.selectEmp], (err,rows) => {
+                                if (err) {
+                                    console.error(err);
+                                }
+                                console.log('Employee manager updated');
+                                init();
+                            });
                         });
-                    });
+                    } 
                 });
             });
         });
@@ -290,7 +300,7 @@ function updateManager() {
 function viewEmployeeByManager() {
     const id = `SELECT DISTINCT manager_id AS id FROM employees WHERE manager_id IS NOT NULL;`;
     db.query(id, (err, rows) => {
-        let sql = `SELECT CONCAT(first_name, ' ', last_name) AS manager FROM employees WHERE id IN ?;`;
+        let sql = `SELECT CONCAT(first_name, ' ', last_name) AS manager FROM employees WHERE id IN (?);`;
         if (err) {
             console.error(err);
         }
@@ -301,12 +311,10 @@ function viewEmployeeByManager() {
         if (idList.length === 1){
             sql = `SELECT CONCAT(first_name, ' ', last_name) AS manager FROM employees WHERE id = ?;`;
         }
-        console.log(idList);
-        db.query(sql, idList, (err, r) => {
+        db.query(sql, [idList], (err, r) => {
             if (err) {
                 console.error(err);
             }
-            console.log(r);
             const nameList = [];
             r.forEach(row => {
             nameList.push(row.manager);
@@ -351,7 +359,7 @@ function viewEmpByDepartment() {
         .then((choice) => {
             const sql = `SELECT CONCAT(first_name, ' ', last_name) AS employee, roles.title AS role, roles.salary AS salary FROM employees
                         JOIN roles ON employees.role_id = roles.id
-                        JOIN departments ON roles.department_id = departments.id WHERE departments.name = 'General'; `;
+                        JOIN departments ON roles.department_id = departments.id WHERE departments.name = ?;`;
             db.query(sql, choice.department, (err, row) => {
                 if (err) {
                     console.err(err)
@@ -410,7 +418,6 @@ function init() {
     ])
     .then((input) => {
         const selection = input.mainSelection;
-        console.log(selection);
         switch(selection) {
             case 'View Departments':
                 showDepartments();
@@ -445,24 +452,11 @@ function init() {
             case 'View Employees By Department':
                 viewEmpByDepartment();
                 break;
-         }
-    })
+        }
+    });
 }
 
 init();
 
-// showDepartments();
-
-// db.end((err) =>  !err || console.error(err));
-
-
-
-
-
-
-// add option for no manager when adding employee
-// add some of the bonus features
-// add env file to protect password
-// modularize,
 // add comments
 // make video
