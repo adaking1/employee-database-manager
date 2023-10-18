@@ -1,5 +1,6 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
+const cTable = require('console.table');
 require('dotenv').config();
 
 
@@ -265,25 +266,134 @@ function updateManager() {
                     }
                 ])
                 .then(choice => {
-                    const sql = `UPDATE employees SET manager_id = (SELECT id FROM employees AS managers WHERE CONCAT(managers.first_name, ' ', managers.last_name) = ?) WHERE CONCAT(first_name, ' ',last_name) = ?;`;
-                    db.query(sql, [choice.newManager, input.selectEmp], (err,rows) => {
+                    console.log(choice.newManager);
+                    const managerId = `SELECT id from employees WHERE CONCAT(first_name, ' ', last_name) = ?;`;
+                    const sql = `UPDATE employees SET manager_id = ? WHERE CONCAT(first_name, ' ',last_name) = ?;`;
+                    db.query(managerId, choice.newManager, (err, manager) => {
                         if (err) {
                             console.error(err);
                         }
-                        console.log('Employee manager updated');
+                        db.query(sql, [manager[0].id, input.selectEmp], (err,rows) => {
+                            if (err) {
+                                console.error(err);
+                            }
+                            console.log('Employee manager updated');
+                            init();
+                        });
                     });
-                })
+                });
             });
         });
     });
 }
 
-function viewEmpByDepartment() {
+function viewEmployeeByManager() {
+    const id = `SELECT DISTINCT manager_id AS id FROM employees WHERE manager_id IS NOT NULL;`;
+    db.query(id, (err, rows) => {
+        let sql = `SELECT CONCAT(first_name, ' ', last_name) AS manager FROM employees WHERE id IN ?;`;
+        if (err) {
+            console.error(err);
+        }
+        const idList = [];
+        rows.forEach(row => {
+            idList.push(row.id);
+        });
+        if (idList.length === 1){
+            sql = `SELECT CONCAT(first_name, ' ', last_name) AS manager FROM employees WHERE id = ?;`;
+        }
+        console.log(idList);
+        db.query(sql, idList, (err, r) => {
+            if (err) {
+                console.error(err);
+            }
+            console.log(r);
+            const nameList = [];
+            r.forEach(row => {
+            nameList.push(row.manager);
+        });
+            inquirer.prompt([
+                {
+                    name: 'name',
+                    type: 'list',
+                    message: 'Select manager',
+                    choices: nameList
+                }
+            ])
+            .then((choice) => {
+                console.log(choice.name);
+                const sql = `SELECT id, CONCAT(first_name, ' ', last_name) AS employees FROM employees WHERE manager_id = (SELECT id FROM employees WHERE CONCAT(first_name, ' ', last_name) = ?);`;
+                db.query(sql, choice.name, (err, employees) => {
+                    if (err) {
+                        console.error(err);
+                    }
+                    console.table(employees);
+                    init();
+                });
+            });
+        });
+    });    
+}
 
+function viewEmpByDepartment() {
+    const sql = `SELECT name FROM departments;`;
+    db.query(sql, (err, rows) => {
+        if (err) {
+            console.error(err);
+        }
+        inquirer.prompt([
+            {
+                name: 'department',
+                type: 'list',
+                message: 'Select Department',
+                choices: rows
+            }
+        ])
+        .then((choice) => {
+            const sql = `SELECT CONCAT(first_name, ' ', last_name) AS employee, roles.title AS role, roles.salary AS salary FROM employees
+                        JOIN roles ON employees.role_id = roles.id
+                        JOIN departments ON roles.department_id = departments.id WHERE departments.name = 'General'; `;
+            db.query(sql, choice.department, (err, row) => {
+                if (err) {
+                    console.err(err)
+                }
+                console.log('\n')
+                console.table(row);
+                console.log('\n');
+                init();
+            })
+        });
+    });
 }
 
 function depBudget() {
-
+    const sql = `SELECT name FROM departments;`;
+    db.query(sql, (err, rows) => {
+        if (err) {
+            console.error(err);
+        }
+        inquirer.prompt([
+            {
+                name: 'department',
+                type: 'list',
+                message: 'Select Department',
+                choices: rows
+            }
+        ])
+        .then(choice => {
+            const sql = `SELECT SUM(salary) AS budget FROM employees JOIN roles ON employees.role_id = roles.id 
+            JOIN departments ON roles.department_id = departments.id
+            WHERE departments.name = ?;`;
+            db.query(sql, choice.department, (err, table) => {
+                if (err) {
+                    console.error(err);
+                }
+                console.log('\n\n');
+                console.table(table);
+                console.log('\n');
+                init();
+            })
+        });
+    });
 }
 
 function init() { 
@@ -294,7 +404,8 @@ function init() {
         type: 'list',
         message: 'What would you like to do?',
         choices: ['View Departments', 'View Roles', 'View Employees', 'Add Department',
-                    'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager']
+                    'Add Role', 'Add Employee', 'Update Employee Role', 'Update Employee Manager',
+                'View Employees By Manager', 'View Budget By Department', 'View Employees By Department']
         }
     ])
     .then((input) => {
@@ -324,6 +435,15 @@ function init() {
                 break;
             case 'Update Employee Manager':
                 updateManager();
+                break;
+            case 'View Employees By Manager':
+                viewEmployeeByManager();
+                break;
+            case 'View Budget By Department':
+                depBudget();
+                break;
+            case 'View Employees By Department':
+                viewEmpByDepartment();
                 break;
          }
     })

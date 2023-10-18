@@ -39,7 +39,7 @@ INSERT INTO roles (title, salary, department_id)
 VALUES ('Hi', 30, (SELECT id FROM departments WHERE departments.name = 'General'));
 
 
-SELECT CONCAT(managers.first_name, ' ', managers.last_name) AS manager FROM employees 
+SELECT DISTINCT CONCAT(managers.first_name, ' ', managers.last_name) AS manager FROM employees WHERE employees.manager_id IS NOT NULL
 LEFT JOIN employees AS managers 
 ON employees.manager_id = managers.id;
 
@@ -68,4 +68,14 @@ SET
                 )
 WHERE 
     CONCAT(employee.first_name, ' ', employee.last_name) = 'Sterling Archer';
-            
+
+
+SELECT CONCAT(first_name, ' ', last_name) FROM employees WHERE manager_id = ?;
+        
+SELECT SUM(salary) FROM roles;
+SELECT CONCAT(first_name, ' ', last_name) AS employee, roles.title AS role, roles.salary AS salary FROM employees
+JOIN roles ON employees.role_id = roles.id
+JOIN departments ON roles.department_id = departments.id WHERE departments.name = 'General'; 
+
+SELECT SUM(salary) AS budget FROM employees JOIN roles ON employees.role_id = roles.id JOIN departments ON roles.department_id = departments.id
+WHERE departments.name = 'General';
