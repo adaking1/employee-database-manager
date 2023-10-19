@@ -15,7 +15,7 @@ const db = mysql.createConnection(
 
 // This function displays the name column from the departments table
 function showDepartments() {
-    const sql = `SELECT name AS department FROM departments;`
+    const sql = `SELECT id, name AS department FROM departments;`
     db.query(sql, (err, rows) => {
         if (err) {
             console.error(err)
