@@ -495,6 +495,3 @@ console.log(`
 
 `);
 init();
-
-// add comments in sql files
-// make video
