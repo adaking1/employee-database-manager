@@ -1,8 +1,8 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
+// this npm package formats all of the console.table's in the file
 const cTable = require('console.table');
 require('dotenv').config();
-
 
 const db = mysql.createConnection(
     {
@@ -10,22 +10,24 @@ const db = mysql.createConnection(
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME
-    },
-    console.log('connected to database')
-
+    }
 );
 
+// This function displays the name column from the departments table
 function showDepartments() {
     const sql = `SELECT name AS department FROM departments;`
     db.query(sql, (err, rows) => {
         if (err) {
             console.error(err)
         }
+        console.log('\n\n');
         console.table(rows);
+        console.log('\n');
         init();
     });
 }
 
+// This function joins the roles and departments tables and displays the role id, role title, department name, and role salary columns 
 function showRoles() {
     const sql = `SELECT roles.id AS id, roles.title AS role, departments.name as department, roles.salary AS salary FROM roles
     JOIN departments
@@ -35,11 +37,14 @@ function showRoles() {
         if (err) {
             console.error(err);
         }
+        console.log('\n\n');
         console.table(rows);
+        console.log('\n');
         init();
     });
 }
 
+// this function joins the employees, roles, departments, and another employees tables and displays the employee id, employee name, role title, department name, role salary, and manager name
 function showEmployees() {
     const sql= `SELECT employees.id AS id, employees.first_name AS first, 
     employees.last_name AS last, roles.title AS job_title, departments.name as department, 
@@ -55,11 +60,14 @@ function showEmployees() {
         if (err) {
             console.error(err);
         }
+        console.log('\n\n');
         console.table(rows);
+        console.log('\n');
         init();
     })
 }
 
+// this function adds a department to the departments table by using INSERT
 function addDepartment() {  
     inquirer
     .prompt([
@@ -70,18 +78,19 @@ function addDepartment() {
         }
     ])
     .then((answer) => {
-        console.log(answer);
         const sql = `INSERT INTO departments (name) VALUES (?);`;
         db.query(sql, [answer.addDep], (err,rows) => {
             if (err) {
                 console.error(err);
             }
-            console.log('New department has been added');
+            console.log('\n New department has been added! \n');
             init();
-        })
+        });
     });
 }
 
+// this function prompts the user to enter the name of a new role, enter the salary, and select its department.
+// it then inserts that role into the roles table
 function addRole() {
     inquirer
     .prompt([
@@ -118,7 +127,7 @@ function addRole() {
                     if (err) {
                         console.error(err);
                     }
-                    console.log('New role added');
+                    console.log('\n New role has been added! \n');
                     init();
                 });
             });
@@ -126,6 +135,8 @@ function addRole() {
     });
 }
 
+// this function prompts the user for the new employee's name, then select their role, and select their manager.
+// it then inserts the new employee into the employees table
 function addEmployee() {
     inquirer
     .prompt([
@@ -163,7 +174,6 @@ function addEmployee() {
                     if (err) {
                         console.error(err);
                     }
-                    console.log(rows);
                     inquirer.prompt([
                         {
                             name: 'manager',
@@ -179,7 +189,7 @@ function addEmployee() {
                             if (err) {
                                 console.error(err);
                             }
-                            console.log('Employee added');
+                            console.log('\n Employee added! \n');
                             init();
                         });
                     });
@@ -192,6 +202,8 @@ function addEmployee() {
     });
 }
 
+// this function prompts the user to select an employee to update, then it prompts the user to select the new role
+// it then updates the employee's role id on the employees table
 function updateEmployeeRole() {
     const sql = `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employees;`;
     db.query(sql, (err, rows) => {
@@ -207,13 +219,11 @@ function updateEmployeeRole() {
             }
         ])
         .then(data => {
-            console.log(data);
             const sql = `SELECT title AS name FROM roles;`;
             db.query(sql, (err, rows) => {
                 if (err) {
-                    console.log(err);
+                    console.error(err);
                 }
-                console.log(rows);
                 inquirer.prompt([
                     {
                         name: 'role',
@@ -228,7 +238,7 @@ function updateEmployeeRole() {
                         if (err) {
                             console.error(err);
                         }
-                        console.log('Employee role updated');
+                        console.log('\n Employee role updated! \n');
                         init();
                     });
                 });
@@ -237,6 +247,8 @@ function updateEmployeeRole() {
     });
 }
 
+// this function prompts the user to select employee to update, then prompts the user to select their new manager
+// it then updates the manager id on the employees table
 function updateManager() {
     const sql = `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employees;`
     db.query(sql, (err, rows) => {
@@ -266,13 +278,12 @@ function updateManager() {
                     }
                 ])
                 .then(choice => {
-                    console.log(choice.newManager);
                     const managerId = `SELECT id from employees WHERE CONCAT(first_name, ' ', last_name) = ?;`;
                     const sql = `UPDATE employees SET manager_id = ? WHERE CONCAT(first_name, ' ',last_name) = ?;`;
                     if (choice.newManager === 'None') {
                         const sqlNull = `UPDATE employees SET manager_id = null WHERE CONCAT(first_name, ' ',last_name) = ?;`;
                         db.query(sqlNull, input.selectEmp, (err, rows) => {
-                            console.log('Manager updated');
+                            console.log('\n Manager updated! \n');
                             init();
                         })
                         
@@ -286,7 +297,7 @@ function updateManager() {
                                 if (err) {
                                     console.error(err);
                                 }
-                                console.log('Employee manager updated');
+                                console.log('\n Employee manager updated! \n');
                                 init();
                             });
                         });
@@ -297,6 +308,8 @@ function updateManager() {
     });
 }
 
+// this function prompts the user to select manager 
+// it then displays the employees whose manager id is the id of the selected manager
 function viewEmployeeByManager() {
     const id = `SELECT DISTINCT manager_id AS id FROM employees WHERE manager_id IS NOT NULL;`;
     db.query(id, (err, rows) => {
@@ -328,13 +341,14 @@ function viewEmployeeByManager() {
                 }
             ])
             .then((choice) => {
-                console.log(choice.name);
                 const sql = `SELECT id, CONCAT(first_name, ' ', last_name) AS employees FROM employees WHERE manager_id = (SELECT id FROM employees WHERE CONCAT(first_name, ' ', last_name) = ?);`;
                 db.query(sql, choice.name, (err, employees) => {
                     if (err) {
                         console.error(err);
                     }
+                    console.log('\n\n');
                     console.table(employees);
+                    console.log('\n');
                     init();
                 });
             });
@@ -342,6 +356,8 @@ function viewEmployeeByManager() {
     });    
 }
 
+// this function prompts the user to select a department
+// it then displays the names, role, and salaries for the employees in the selected department
 function viewEmpByDepartment() {
     const sql = `SELECT name FROM departments;`;
     db.query(sql, (err, rows) => {
@@ -364,7 +380,7 @@ function viewEmpByDepartment() {
                 if (err) {
                     console.err(err)
                 }
-                console.log('\n')
+                console.log('\n\n')
                 console.table(row);
                 console.log('\n');
                 init();
@@ -373,6 +389,8 @@ function viewEmpByDepartment() {
     });
 }
 
+// this function prompts the user to select a department
+// it then adds the salary of every employee in that salary and displays it
 function depBudget() {
     const sql = `SELECT name FROM departments;`;
     db.query(sql, (err, rows) => {
@@ -404,6 +422,8 @@ function depBudget() {
     });
 }
 
+// this function initiates the app
+// it starts the initial prompt
 function init() { 
     inquirer
     .prompt([
@@ -456,7 +476,25 @@ function init() {
     });
 }
 
+// this is used as an opening page for the app
+console.log(`
+███████╗███╗░░░███╗██████╗░██╗░░░░░░█████╗░██╗░░░██╗███████╗███████╗  ██████╗░██████╗░
+██╔════╝████╗░████║██╔══██╗██║░░░░░██╔══██╗╚██╗░██╔╝██╔════╝██╔════╝  ██╔══██╗██╔══██╗
+█████╗░░██╔████╔██║██████╔╝██║░░░░░██║░░██║░╚████╔╝░█████╗░░█████╗░░  ██║░░██║██████╦╝
+██╔══╝░░██║╚██╔╝██║██╔═══╝░██║░░░░░██║░░██║░░╚██╔╝░░██╔══╝░░██╔══╝░░  ██║░░██║██╔══██╗
+███████╗██║░╚═╝░██║██║░░░░░███████╗╚█████╔╝░░░██║░░░███████╗███████╗  ██████╔╝██████╦╝
+╚══════╝╚═╝░░░░░╚═╝╚═╝░░░░░╚══════╝░╚════╝░░░░╚═╝░░░╚══════╝╚══════╝  ╚═════╝░╚═════╝░
+
+███╗░░░███╗░█████╗░███╗░░██╗░█████╗░░██████╗░███████╗██████╗░
+████╗░████║██╔══██╗████╗░██║██╔══██╗██╔════╝░██╔════╝██╔══██╗
+██╔████╔██║███████║██╔██╗██║███████║██║░░██╗░█████╗░░██████╔╝
+██║╚██╔╝██║██╔══██║██║╚████║██╔══██║██║░░╚██╗██╔══╝░░██╔══██╗
+██║░╚═╝░██║██║░░██║██║░╚███║██║░░██║╚██████╔╝███████╗██║░░██║
+╚═╝░░░░░╚═╝╚═╝░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝░╚═════╝░╚══════╝╚═╝░░╚═╝ 
+
+
+`);
 init();
 
-// add comments
+// add comments in sql files
 // make video
